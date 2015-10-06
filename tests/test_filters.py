@@ -317,10 +317,6 @@ class TestMysqlCreateStatementFilter(unittest.TestCase):
         filter = sqlparse.filters.MysqlCreateStatementFilter()
         assert filter._clean_quote('abc') == 'abc'
         assert filter._clean_quote('"abc"') == 'abc'
-        assert filter._clean_quote('ab`c') == 'ab`c'
-        assert filter._clean_quote('ab"c') == 'ab"c'
-        assert filter._clean_quote('`abc') == '`abc'
-        assert filter._clean_quote('abc"') == 'abc"'
         assert filter._clean_quote('`ab``c`') == 'ab`c'
         assert filter._clean_quote('"ab""c"') == 'ab"c'
         assert filter._clean_quote('`ab""c`') == 'ab""c'
@@ -330,6 +326,25 @@ class TestMysqlCreateStatementFilter(unittest.TestCase):
         assert filter._clean_quote('"`abc`"') == '`abc`'
         assert filter._clean_quote('`"a""b``c"`') == '"a""b`c"'
         assert filter._clean_quote('"`a``b""c`"') == '`a``b"c`'
+
+    def test_is_create_temp_table_stmt(self):
+        sql_stmt = 'create temporary  table  `foo.``bar` (id int);'
+        statement = self._pre_process_sql(sql_stmt)
+        assert sqlparse.parsers._is_create_table_statement(statement)
+
+        assert isinstance(statement, sql.Statement)
+        assert statement.get_type() == 'CREATE'
+        table_name = statement.token_next_by_instance(0, sql.TableName)
+        self.assertEqual(table_name.value, u'foo.`bar')
+        column_definitions = statement.token_next_by_instance(0, sql.ColumnsDefinition).tokens
+        self.assertEqual(len(column_definitions), 1)
+        self._assert_column_definition(
+            column_definition_token=column_definitions[0],
+            column_name=u'id',
+            column_type=u'int',
+            column_type_length=None,
+            column_attributes=[]
+        )
 
     def _assert_column_definition(
         self,

@@ -29,7 +29,7 @@ def build_parsers():
     return parsers
 
 
-parsers = build_parsers()
+_parsers = build_parsers()
 
 
 def parse(sql, encoding=None, dialect=None):
@@ -56,7 +56,7 @@ def parsestream(stream, encoding=None, dialect=None):
     It only supports "mysql" right now. (optional)
     :returns: A generator of :class:`~sqlparse.sql.Statement` instances.
     """
-    parser = parsers.get(dialect)
+    parser = _parsers.get(dialect)
     if parser is None:
         raise Exception("Unable to find parser to parse dialect ({0})."
                         .format(dialect))

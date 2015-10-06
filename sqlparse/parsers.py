@@ -29,13 +29,33 @@ def _is_create_table_statement(statement):
     if statement.get_type() == 'CREATE':
         first_keyword_token = statement.token_first()
         first_keyword_token_index = statement.token_index(first_keyword_token)
-        second_keyword_token = statement.token_next_by_type(
-            first_keyword_token_index+1,
-            T.Keyword
+        next_token, token_index = _get_token_and_index(
+            statement,
+            token_type=T.Keyword,
+            start_index=first_keyword_token_index + 1
         )
-        if second_keyword_token and second_keyword_token.normalized == 'TABLE':
+        if _is_keyword_token(next_token, 'TABLE'):
             return True
+
+        if _is_keyword_token(next_token, 'TEMPORARY'):
+            next_token, token_index = _get_token_and_index(
+                statement,
+                token_type=T.Keyword,
+                start_index=token_index + 1
+            )
+            if _is_keyword_token(next_token, 'TABLE'):
+                return True
     return False
+
+
+def _get_token_and_index(stmt, token_type, start_index):
+    next_token = stmt.token_next_by_type(start_index, token_type)
+    token_index = stmt.token_index(next_token)
+    return next_token, token_index
+
+
+def _is_keyword_token(token, normalized_keyword):
+    return token and token.normalized == normalized_keyword
 
 
 class GeneralSQLParser(SQLParser):
