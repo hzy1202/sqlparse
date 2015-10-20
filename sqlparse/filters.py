@@ -673,7 +673,8 @@ class MysqlCreateStatementFilter(object):
         column_definition_children_tokens.extend(
             self._skip_white_space_and_new_line_tokens(token_queue)
         )
-        column_definition_children_tokens.append(self._create_column_type(token_queue))
+        col_type_token = self._create_column_type(token_queue)
+        column_definition_children_tokens.append(col_type_token)
 
         column_definition_children_tokens.extend(
             self._skip_white_space_and_new_line_tokens(token_queue)
@@ -685,7 +686,9 @@ class MysqlCreateStatementFilter(object):
         column_definition_children_tokens.extend(
             self._skip_white_space_and_new_line_tokens(token_queue)
         )
-        column_definition_children_tokens.append(self._create_column_attributes(token_queue))
+        column_definition_children_tokens.append(
+            self._create_col_attrs_token(token_queue, col_type_token)
+        )
 
         column_definition = sql.ColumnDefinition(tokens=column_definition_children_tokens)
         return column_definition
@@ -723,51 +726,60 @@ class MysqlCreateStatementFilter(object):
                 tokens=parenthesis_token.tokens
             )
 
-    def _create_column_attributes(self, token_queue):
-        column_attributes_children_tokens = self._get_attributes(token_queue)
-        return sql.ColumnAttributes(tokens=column_attributes_children_tokens)
+    def _create_col_attrs_token(self, token_queue, col_type_token):
+        return sql.ColumnAttributes(
+            tokens=self._get_attributes(token_queue, col_type_token)
+        )
 
-    def _get_attributes(self, token_queue):
+    def _get_attributes(self, token_queue, col_type_token):
         attributes = []
-        attribute_name_token = None
+        attr_name_token = None
         while len(token_queue) > 0:
             attributes.extend(self._skip_white_space_and_new_line_tokens(token_queue))
             if len(token_queue) <= 0:
                 break
 
             token = token_queue.popleft()
-            if attribute_name_token is None:
+            if attr_name_token is None:
                 has_value = self.attribute_name_to_has_value_map.get(token.value.lower())
                 if has_value is None:
                     attributes.append(token)
                 elif has_value:
-                    attribute_name_token = token
+                    attr_name_token = token
                 else:
                     attributes.append(self._generate_attribute_token(token))
             else:
+                if self._is_bit_type_default_value(col_type_token, attr_name_token):
+                    # default value of bit type is formatted as "b'001'", and
+                    # currently it's split into two tokens: Name token (b) and
+                    # Single token ('001'). So here it explicitly gets the next
+                    # token for the actual default value.
+                    token = token_queue.popleft()
                 attributes.append(
-                    self._generate_attribute_token(
-                        attribute_name_token,
-                        token
-                    )
+                    self._generate_attribute_token(attr_name_token, token)
                 )
-                attribute_name_token = None
-        if attribute_name_token is not None:
-            attributes.append(self._generate_attribute_token(attribute_name_token))
+                attr_name_token = None
+
+        if attr_name_token is not None:
+            attributes.append(self._generate_attribute_token(attr_name_token))
         return attributes
 
-    def _generate_attribute_token(self, attribute_name_token, attribute_value_token=None):
+    def _is_bit_type_default_value(self, col_type_token, attr_name_token):
+        return (col_type_token.normalized == u'BIT' and
+                attr_name_token.normalized == u'DEFAULT')
+
+    def _generate_attribute_token(self, attr_name_token, attr_value_token=None):
         attribute_token_list = [
             sql.Token(
-                value=attribute_name_token.value,
+                value=attr_name_token.value,
                 ttype=T.Keyword
             )
         ]
-        if attribute_value_token is not None:
+        if attr_value_token is not None:
             attribute_token_list.append(
                 sql.Token(
-                    value=attribute_value_token.value.strip('`"\''),
-                    ttype=attribute_value_token.ttype
+                    value=attr_value_token.value.strip('`"\''),
+                    ttype=attr_value_token.ttype
                 )
             )
         return sql.Attribute(

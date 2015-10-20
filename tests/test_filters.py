@@ -128,63 +128,61 @@ class TestMysqlCreateStatementFilter(unittest.TestCase):
 
     def test_complex_create_statement(self):
         statement = self._pre_process_sql(self.create_stmt)
-        assert isinstance(statement, sql.Statement)
-        assert statement.get_type() == 'CREATE'
-        table_name = statement.token_next_by_instance(0, sql.TableName)
-        self.assertEqual(table_name.value, u'abc')
+        self._assert_is_create_table_stmt(statement)
+        self._assert_equal_table_name(statement, u'abc')
         column_definitions = statement.token_next_by_instance(0, sql.ColumnsDefinition).tokens
         self.assertEqual(len(column_definitions), 8)
         self._assert_column_definition(
-            column_definition_token=column_definitions[0],
+            col_definition=column_definitions[0],
             column_name=u'id',
             column_type=u'int',
             column_type_length=(u'11',),
             column_attributes=[(u'not null',), (u'auto_increment',)]
         )
         self._assert_column_definition(
-            column_definition_token=column_definitions[1],
+            col_definition=column_definitions[1],
             column_name=u'name',
             column_type=u'varchar',
             column_type_length=(u'64',),
             column_attributes=[(u'collate', u'utf8_unicode_ci'), (u'default', u'null')]
         )
         self._assert_column_definition(
-            column_definition_token=column_definitions[2],
+            col_definition=column_definitions[2],
             column_name=u'address',
             column_type=u'varchar',
             column_type_length=(u'128',),
             column_attributes=[(u'collate', u'utf8_unicode_ci'), (u'default', u'null')]
         )
         self._assert_column_definition(
-            column_definition_token=column_definitions[3],
+            col_definition=column_definitions[3],
             column_name=u'related_id',
             column_type=u'int',
             column_type_length=(u'11',),
             column_attributes=[(u'not null',), (u'default', u'0',)]
         )
         self._assert_column_definition(
-            column_definition_token=column_definitions[4],
+            col_definition=column_definitions[4],
             column_name=u'currency',
             column_type=u'double',
             column_type_length=(u'8', u'2'),
             column_attributes=[(u'default', u'null')]
         )
         self._assert_column_definition(
-            column_definition_token=column_definitions[5],
+            col_definition=column_definitions[5],
             column_name=u'time_created',
             column_type=u'int',
             column_type_length=(u'11',),
             column_attributes=[(u'not null',), (u'default', u'0')]
         )
         self._assert_column_definition(
-            column_definition_token=column_definitions[6],
+            col_definition=column_definitions[6],
             column_name=u'age',
             column_type=u'int',
             column_type_length=(u'10',),
             column_attributes=[(u'unsigned',), (u'default', u'null')]
         )
         self._assert_column_definition(
-            column_definition_token=column_definitions[7],
+            col_definition=column_definitions[7],
             column_name=u'type',
             column_type=u'tinyint',
             column_type_length=(u'3',),
@@ -195,28 +193,26 @@ class TestMysqlCreateStatementFilter(unittest.TestCase):
         statement = self._pre_process_sql(
             self.create_stmt_without_col_type_length
         )
-        assert isinstance(statement, sql.Statement)
-        assert statement.get_type() == 'CREATE'
-        table_name = statement.token_next_by_instance(0, sql.TableName)
-        self.assertEqual(table_name.value, u'abc')
+        self._assert_is_create_table_stmt(statement)
+        self._assert_equal_table_name(statement, u'abc')
         column_definitions = statement.token_next_by_instance(0, sql.ColumnsDefinition).tokens
         self.assertEqual(len(column_definitions), 3)
         self._assert_column_definition(
-            column_definition_token=column_definitions[0],
+            col_definition=column_definitions[0],
             column_name=u'id',
             column_type=u'int',
             column_type_length=None,
             column_attributes=[(u'not null',), (u'auto_increment',)]
         )
         self._assert_column_definition(
-            column_definition_token=column_definitions[1],
+            col_definition=column_definitions[1],
             column_name=u'age',
             column_type=u'int',
             column_type_length=None,
             column_attributes=[(u'default', u'null')]
         )
         self._assert_column_definition(
-            column_definition_token=column_definitions[2],
+            col_definition=column_definitions[2],
             column_name=u'name',
             column_type=u'varchar',
             column_type_length=None,
@@ -227,90 +223,66 @@ class TestMysqlCreateStatementFilter(unittest.TestCase):
         statement = self._pre_process_sql(
             self.create_stmt_without_col_attributes
         )
-        assert isinstance(statement, sql.Statement)
-        assert statement.get_type() == 'CREATE'
-        table_name = statement.token_next_by_instance(0, sql.TableName)
-        self.assertEqual(table_name.value, u'abc')
+        self._assert_is_create_table_stmt(statement)
+        self._assert_equal_table_name(statement, u'abc')
         column_definitions = statement.token_next_by_instance(0, sql.ColumnsDefinition).tokens
         self.assertEqual(len(column_definitions), 3)
         self._assert_column_definition(
-            column_definition_token=column_definitions[0],
+            col_definition=column_definitions[0],
             column_name=u'id',
             column_type=u'int',
             column_type_length=(u'11',),
             column_attributes=[]
         )
         self._assert_column_definition(
-            column_definition_token=column_definitions[1],
+            col_definition=column_definitions[1],
             column_name=u'age',
             column_type=u'int',
             column_type_length=(u'11',),
             column_attributes=[]
         )
         self._assert_column_definition(
-            column_definition_token=column_definitions[2],
+            col_definition=column_definitions[2],
             column_name=u'name',
             column_type=u'varchar',
             column_type_length=(u'64',),
             column_attributes=[]
         )
 
-    @property
-    def create_stmt_without_keys(self):
-        return """
+    def test_create_stmt_without_keys(self):
+        sql_stmt = """
             CREATE TABLE `abc` (
-                `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
                 `count` int(11) unsigned DEFAULT '0'
             ) ENGINE=BLACKHOLE DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci
         """
+        actual_stmt = self._pre_process_sql(sql_stmt)
 
-    def test_create_stmt_without_keys(self):
-        statement = self._pre_process_sql(self.create_stmt_without_keys)
-
-        assert isinstance(statement, sql.Statement)
-        assert statement.get_type() == 'CREATE'
-        table_name = statement.token_next_by_instance(0, sql.TableName)
-        self.assertEqual(table_name.value, u'abc')
-        column_definitions = statement.token_next_by_instance(0, sql.ColumnsDefinition).tokens
-        self.assertEqual(len(column_definitions), 2)
-        self._assert_column_definition(
-            column_definition_token=column_definitions[0],
-            column_name=u'name',
-            column_type=u'varchar',
-            column_type_length=(u'255',),
-            column_attributes=[(u'collate', u'utf8_unicode_ci'), (u'not null',)]
-        )
-        self._assert_column_definition(
-            column_definition_token=column_definitions[1],
-            column_name=u'count',
-            column_type=u'int',
-            column_type_length=(u'11',),
-            column_attributes=[(u'unsigned',), (u'default', u'0')]
+        self._assert_is_create_table_stmt(actual_stmt)
+        self._assert_equal_table_name(actual_stmt, u'abc')
+        self._assert_single_column_definition(
+            actual_stmt,
+            expected_name=u'count',
+            expected_type=u'int',
+            expected_type_length=(u'11',),
+            expected_attributes=[(u'unsigned',), (u'default', u'0')]
         )
 
-    @property
-    def create_stmt_with_simple_column(self):
-        return """
+    def test_create_stmt_with_simple_column(self):
+        sql_stmt = """
             CREATE TABLE `abc` (
                 `amount` double
             ) ENGINE=BLACKHOLE DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci
         """
+        actual_stmt = self._pre_process_sql(sql_stmt)
 
-    def test_create_stmt_with_simple_column(self):
-        statement = self._pre_process_sql(self.create_stmt_with_simple_column)
-
-        assert isinstance(statement, sql.Statement)
-        assert statement.get_type() == 'CREATE'
-        table_name = statement.token_next_by_instance(0, sql.TableName)
-        self.assertEqual(table_name.value, u'abc')
-        column_definitions = statement.token_next_by_instance(0, sql.ColumnsDefinition).tokens
-        self.assertEqual(len(column_definitions), 1)
-        self._assert_column_definition(
-            column_definition_token=column_definitions[0],
-            column_name=u'amount',
-            column_type=u'double',
-            column_type_length=None,
-            column_attributes=[]
+        self._assert_is_create_table_stmt(actual_stmt)
+        self._assert_equal_table_name(actual_stmt, u'abc')
+        self._assert_single_column_definition(
+            actual_stmt,
+            expected_name=u'amount',
+            expected_type=u'double',
+            expected_type_length=None,
+            expected_attributes=[]
         )
 
     def test_clean_quotes(self):
@@ -329,49 +301,80 @@ class TestMysqlCreateStatementFilter(unittest.TestCase):
 
     def test_is_create_temp_table_stmt(self):
         sql_stmt = 'create temporary  table  `foo.``bar` (id int);'
-        statement = self._pre_process_sql(sql_stmt)
-        assert sqlparse.parsers._is_create_table_statement(statement)
+        actual_stmt = self._pre_process_sql(sql_stmt)
+        assert sqlparse.parsers._is_create_table_statement(actual_stmt)
 
-        assert isinstance(statement, sql.Statement)
-        assert statement.get_type() == 'CREATE'
-        table_name = statement.token_next_by_instance(0, sql.TableName)
-        self.assertEqual(table_name.value, u'foo.`bar')
-        column_definitions = statement.token_next_by_instance(0, sql.ColumnsDefinition).tokens
-        self.assertEqual(len(column_definitions), 1)
+        self._assert_is_create_table_stmt(actual_stmt)
+        self._assert_equal_table_name(actual_stmt, u'foo.`bar')
+        self._assert_single_column_definition(
+            actual_stmt,
+            expected_name=u'id',
+            expected_type=u'int',
+            expected_type_length=None,
+            expected_attributes=[]
+        )
+
+    def test_create_stmt_with_bit_default_value(self):
+        sql_stmt = 'create table `foo` (`bar` bit default b\'001\');'
+        actual_stmt = self._pre_process_sql(sql_stmt)
+
+        self._assert_is_create_table_stmt(actual_stmt)
+        self._assert_equal_table_name(actual_stmt, u'foo')
+        self._assert_single_column_definition(
+            actual_stmt,
+            expected_name=u'bar',
+            expected_type=u'bit',
+            expected_type_length=None,
+            expected_attributes=[(u'default', u'001',)]
+        )
+
+    def _assert_is_create_table_stmt(self, stmt):
+        assert isinstance(stmt, sql.Statement) and stmt.get_type() == 'CREATE'
+
+    def _assert_equal_table_name(self, actual_stmt, expected_table_name):
+        table_name = actual_stmt.token_next_by_instance(0, sql.TableName)
+        self.assertEqual(table_name.value, expected_table_name)
+
+    def _assert_single_column_definition(
+        self,
+        actual_stmt,
+        expected_name,
+        expected_type,
+        expected_type_length,
+        expected_attributes
+    ):
+        col_definitions = actual_stmt.token_next_by_instance(
+            0,
+            sql.ColumnsDefinition
+        ).tokens
+        self.assertEqual(len(col_definitions), 1)
+
+        col_definition = col_definitions[0]
         self._assert_column_definition(
-            column_definition_token=column_definitions[0],
-            column_name=u'id',
-            column_type=u'int',
-            column_type_length=None,
-            column_attributes=[]
+            col_definition,
+            expected_name,
+            expected_type,
+            expected_type_length,
+            expected_attributes
         )
 
     def _assert_column_definition(
         self,
-        column_definition_token,
+        col_definition,
         column_name,
         column_type,
         column_type_length,
         column_attributes
     ):
-        assert isinstance(
-            column_definition_token,
-            sql.ColumnDefinition
-        )
+        assert isinstance(col_definition, sql.ColumnDefinition)
+        self.assertEqual(self._get_column_name(col_definition), column_name)
+        self.assertEqual(self._get_column_type(col_definition), column_type)
         self.assertEqual(
-            self._get_column_name(column_definition_token),
-            column_name
-        )
-        self.assertEqual(
-            self._get_column_type(column_definition_token),
-            column_type
-        )
-        self.assertEqual(
-            self._get_column_type_length(column_definition_token),
+            self._get_column_type_length(col_definition),
             column_type_length
         )
         self.assertEqual(
-            self._get_column_attributes(column_definition_token),
+            self._get_column_attributes(col_definition),
             column_attributes
         )
 
