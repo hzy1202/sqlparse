@@ -8,6 +8,7 @@ import unittest
 import sqlparse
 from sqlparse import sql
 from sqlparse import tokens as T
+from sqlparse.exceptions import SQLParseError
 from sqlparse.filters import StripWhitespace
 from sqlparse.filters import Tokens2Unicode
 from sqlparse.lexer import tokenize
@@ -327,6 +328,24 @@ class TestMysqlCreateStatementFilter(unittest.TestCase):
             expected_type_length=None,
             expected_attributes=[(u'default', u'001',)]
         )
+
+    def test_create_stmt_with_bit_0b_format_default_value(self):
+        sql_stmt = 'create table `foo` (`bar` bit default 0b001);'
+        actual_stmt = self._pre_process_sql(sql_stmt)
+
+        self._assert_is_create_table_stmt(actual_stmt)
+        self._assert_equal_table_name(actual_stmt, u'foo')
+        self._assert_single_column_definition(
+            actual_stmt,
+            expected_name=u'bar',
+            expected_type=u'bit',
+            expected_type_length=None,
+            expected_attributes=[(u'default', u'001',)]
+        )
+
+    def test_create_stmt_with_bit_bad_default_value(self):
+        sql_stmt = 'create table `foo` (`bar` bit default b001);'
+        self.assertRaises(SQLParseError, self._pre_process_sql, sql_stmt)
 
     def _assert_is_create_table_stmt(self, stmt):
         assert isinstance(stmt, sql.Statement) and stmt.get_type() == 'CREATE'

@@ -750,11 +750,7 @@ class MysqlCreateStatementFilter(object):
                     attributes.append(self._generate_attribute_token(token))
             else:
                 if self._is_bit_type_default_value(col_type_token, attr_name_token):
-                    # default value of bit type is formatted as "b'001'", and
-                    # currently it's split into two tokens: Name token (b) and
-                    # Single token ('001'). So here it explicitly gets the next
-                    # token for the actual default value.
-                    token = token_queue.popleft()
+                    token = self._get_bit_default_value_token(token_queue, token)
                 attributes.append(
                     self._generate_attribute_token(attr_name_token, token)
                 )
@@ -767,6 +763,23 @@ class MysqlCreateStatementFilter(object):
     def _is_bit_type_default_value(self, col_type_token, attr_name_token):
         return (col_type_token.normalized == u'BIT' and
                 attr_name_token.normalized == u'DEFAULT')
+
+    def _get_bit_default_value_token(self, token_queue, cur_token):
+        # Refer to https://dev.mysql.com/doc/refman/5.5/en/bit-field-literals.html
+        # for information of bit field literal
+        if cur_token.normalized == u'b':
+            # If default value of bit type is formatted as "b'001'", currently
+            # it's split into two tokens: Name token (b) and Single token ('001').
+            # So here it gets the next token for the actual default value.
+            return token_queue.popleft()
+        if cur_token.value == u'0':
+            # If default value of bit type is formatted as "0b001", currently
+            # it's split into two tokens: Integer token (0) and Name token ('b001').
+            # So here it gets the next token to extract the actual default value.
+            token = token_queue.popleft()
+            token.value = token.value[1:]
+            return token
+        raise SQLParseError("Cannot get default value for BIT type.")
 
     def _generate_attribute_token(self, attr_name_token, attr_value_token=None):
         attribute_token_list = [
