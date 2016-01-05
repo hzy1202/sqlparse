@@ -581,12 +581,15 @@ class MysqlCreateStatementFilter(object):
     def process(self, stack, statement):
         if statement.get_type() != 'CREATE':
             return
-        self._process_table_name(statement)
+        next_token_index = self._process_table_name(statement)
+        if self._is_create_like_statement(statement, next_token_index):
+            self._process_like_statement(statement, next_token_index + 1)
+            return
         self._process_columns(statement)
 
-    def _process_table_name(self, statement):
+    def _process_table_name(self, statement, cur_token_index=0):
         # 1st Name type is the table name
-        table_name_token = statement.token_next_by_type(0, T.Name)
+        table_name_token = statement.token_next_by_type(cur_token_index, T.Name)
         if not table_name_token:
             raise SQLParseError('Cannot find table name.')
         table_name_token_index = statement.token_index(table_name_token)
@@ -595,6 +598,7 @@ class MysqlCreateStatementFilter(object):
             value=table_name,
             ttype=T.Name
         )
+        return table_name_token_index + 1
 
     def _clean_quote(self, text):
         """Clean the quotes for identifiers.  For the information of identifier:
@@ -613,6 +617,13 @@ class MysqlCreateStatementFilter(object):
             if first_char == quote and first_char == last_char:
                 clean_text = text[1:-1].replace(quote*2, quote)
         return clean_text
+
+    def _is_create_like_statement(self, statement, cur_token_index):
+        like_token = statement.token_next_by_type(cur_token_index, T.Keyword)
+        return like_token and like_token.normalized == u'LIKE'
+
+    def _process_like_statement(self, statement, cur_token_index):
+        return self._process_table_name(statement, cur_token_index)
 
     def _process_columns(self, statement):
         # Get the Parenthesis which contains column definitions

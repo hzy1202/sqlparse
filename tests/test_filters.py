@@ -347,6 +347,27 @@ class TestMysqlCreateStatementFilter(unittest.TestCase):
         sql_stmt = 'create table `foo` (`bar` bit default b001);'
         self.assertRaises(SQLParseError, self._pre_process_sql, sql_stmt)
 
+    def test_create_table_like_statment(self):
+        sql_stmt = 'create table `foo` like `bar`;'
+        actual_stmt = self._pre_process_sql(sql_stmt)
+
+        self._assert_is_create_table_stmt(actual_stmt)
+
+        table_name = actual_stmt.token_next_by_instance(0, sql.TableName)
+        self.assertEqual(table_name.value, u'foo')
+
+        token_index = actual_stmt.token_index(table_name)
+        table_name = actual_stmt.token_next_by_instance(token_index + 1, sql.TableName)
+        self.assertEqual(table_name.value, u'bar')
+
+    def test_create_table_like_without_old_table_name(self):
+        sql_stmt = 'create table `foo` like ;'
+        self.assertRaises(SQLParseError, self._pre_process_sql, sql_stmt)
+
+    def test_missing_column_definition(self):
+        sql_stmt = 'create table `foo`;'
+        self.assertRaises(SQLParseError, self._pre_process_sql, sql_stmt)
+
     def _assert_is_create_table_stmt(self, stmt):
         assert isinstance(stmt, sql.Statement) and stmt.get_type() == 'CREATE'
 
