@@ -487,7 +487,7 @@ class TestMysqlCreateStatementFilter(unittest.TestCase):
         )
         if column_type_values_token is not None:
             return tuple(
-                column_type_values_token._remove_quotes(token.value)
+                token.value.strip('`"\'')
                 for token in column_type_values_token.tokens
                 if token.ttype is T.Literal.String.Single
             )

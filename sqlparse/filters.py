@@ -691,7 +691,8 @@ class MysqlCreateStatementFilter(object):
             self._skip_white_space_and_new_line_tokens(token_queue)
         )
 
-        if col_type_token.value == 'set' or col_type_token.value == 'enum':
+        if (col_type_token.value.lower() == 'set' or
+                col_type_token.value.lower() == 'enum'):
             column_type_meta_token = self._create_column_type_values(token_queue)
         else:
             column_type_meta_token = self._create_column_type_length(token_queue)
@@ -748,7 +749,7 @@ class MysqlCreateStatementFilter(object):
             parenthesis_token = token_queue.popleft()
             return sql.ColumnTypeValues(
                 tokens=[sql.Token(
-                    value=self._clean_quote(token.value),
+                    value=token.value.strip('`"\''),
                     ttype=token.ttype
                 ) for token in parenthesis_token.tokens]
             )
