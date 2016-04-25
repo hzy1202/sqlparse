@@ -702,6 +702,11 @@ class ColumnTypeLength(TokenList):
     __slots__ = ('value', 'ttype', 'tokens')
 
 
+class ColumnTypeValues(TokenList):
+
+    __slots__ = ('value', 'ttype', 'tokens')
+
+
 class Begin(TokenList):
     """A BEGIN/END block."""
 

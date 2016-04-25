@@ -690,9 +690,13 @@ class MysqlCreateStatementFilter(object):
         column_definition_children_tokens.extend(
             self._skip_white_space_and_new_line_tokens(token_queue)
         )
-        column_type_length_token = self._create_column_type_length(token_queue)
-        if column_type_length_token:
-            column_definition_children_tokens.append(column_type_length_token)
+
+        if col_type_token.value == 'set' or col_type_token.value == 'enum':
+            column_type_meta_token = self._create_column_type_values(token_queue)
+        else:
+            column_type_meta_token = self._create_column_type_length(token_queue)
+        if column_type_meta_token:
+            column_definition_children_tokens.append(column_type_meta_token)
 
         column_definition_children_tokens.extend(
             self._skip_white_space_and_new_line_tokens(token_queue)
@@ -735,6 +739,18 @@ class MysqlCreateStatementFilter(object):
             parenthesis_token = token_queue.popleft()
             return sql.ColumnTypeLength(
                 tokens=parenthesis_token.tokens
+            )
+
+    def _create_column_type_values(self, token_queue):
+        if len(token_queue) <= 0:
+            return None
+        if isinstance(token_queue[0], sql.Parenthesis):
+            parenthesis_token = token_queue.popleft()
+            return sql.ColumnTypeValues(
+                tokens=[sql.Token(
+                    value=self._clean_quote(token.value),
+                    ttype=token.ttype
+                ) for token in parenthesis_token.tokens]
             )
 
     def _create_col_attrs_token(self, token_queue, col_type_token):
