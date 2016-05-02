@@ -691,13 +691,12 @@ class MysqlCreateStatementFilter(object):
             self._skip_white_space_and_new_line_tokens(token_queue)
         )
 
-        if (col_type_token.value.lower() == 'set' or
-                col_type_token.value.lower() == 'enum'):
-            column_type_meta_token = self._create_column_type_values(token_queue)
+        if col_type_token.value.lower() in ['set', 'enum']:
+            column_type_parenthesis_token = self._create_column_type_values(token_queue)
         else:
-            column_type_meta_token = self._create_column_type_length(token_queue)
-        if column_type_meta_token:
-            column_definition_children_tokens.append(column_type_meta_token)
+            column_type_parenthesis_token = self._create_column_type_length(token_queue)
+        if column_type_parenthesis_token:
+            column_definition_children_tokens.append(column_type_parenthesis_token)
 
         column_definition_children_tokens.extend(
             self._skip_white_space_and_new_line_tokens(token_queue)

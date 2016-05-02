@@ -446,7 +446,7 @@ class TestMysqlCreateStatementFilter(unittest.TestCase):
         assert isinstance(col_definition, sql.ColumnDefinition)
         self.assertEqual(self._get_column_name(col_definition), column_name)
         self.assertEqual(self._get_column_type(col_definition), column_type)
-        if column_type == 'enum' or column_type == 'set':
+        if column_type in ['enum', 'set']:
             self.assertEqual(
                 self._get_column_type_values(col_definition),
                 column_type_values
