@@ -593,18 +593,27 @@ class MysqlCreateStatementFilter(object):
         if not table_name_token:
             raise SQLParseError('Cannot find table name.')
         table_name_token_index = statement.token_index(table_name_token)
-        table_name = self._clean_quote(table_name_token.value)
+        table_name = self._clean_identifiers_quote(table_name_token.value)
         statement.tokens[table_name_token_index] = sql.TableName(
             value=table_name,
             ttype=T.Name
         )
         return table_name_token_index + 1
 
-    def _clean_quote(self, text):
+    def _clean_identifiers_quote(self, text):
         """Clean the quotes for identifiers.  For the information of identifier:
         https://dev.mysql.com/doc/refman/5.5/en/identifiers.html.
         """
         clean_text = self._remove_quote(text, '`')
+        if clean_text == text:
+            clean_text = self._remove_quote(clean_text, '"')
+        return clean_text
+
+    def _clean_string_quote(self, text):
+        """Clean the quotes for string literals.  For the information of string-literals:
+        https://dev.mysql.com/doc/refman/5.5/en/string-literals.html.
+        """
+        clean_text = self._remove_quote(text, '\'')
         if clean_text == text:
             clean_text = self._remove_quote(clean_text, '"')
         return clean_text
@@ -712,7 +721,7 @@ class MysqlCreateStatementFilter(object):
         if len(token_queue) <= 0:
             raise SQLParseError("Unable to get column name. token_queue is empty.")
         return sql.ColumnName(
-            value=self._clean_quote(token_queue.popleft().value),
+            value=self._clean_identifiers_quote(token_queue.popleft().value),
             ttype=T.Name
         )
 
@@ -748,7 +757,7 @@ class MysqlCreateStatementFilter(object):
             parenthesis_token = token_queue.popleft()
             return sql.ColumnTypeValues(
                 tokens=[sql.Token(
-                    value=token.value.strip('`"\''),
+                    value=self._clean_string_quote(token.value),
                     ttype=token.ttype
                 ) for token in parenthesis_token.tokens]
             )
