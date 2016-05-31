@@ -93,6 +93,8 @@ class TestMysqlCreateStatementFilter(unittest.TestCase):
                 `time_created` int(11) NOT NULL default '0',
                 `age` int(10) unsigned default NULL,
                 `type` tinyint(3) unsigned default NULL,
+                `size` enum('small', 'medium', 'large') collate utf8_unicode_ci,
+                `teams` set('a', 'b', 'c') collate utf8_unicode_ci,
                 PRIMARY KEY  (`id`),
                 KEY `name_address` (`name`,`address`),
                 KEY `related_id` (`related_id`)
@@ -118,6 +120,8 @@ class TestMysqlCreateStatementFilter(unittest.TestCase):
                 `id` int(11),
                 `age` int(11),
                 `name` varchar(64),
+                `size` enum('small', 'medium', 'large'),
+                `teams` set('a', 'b', 'c'),
                 PRIMARY KEY  (`id`),
                 KEY `age_name` (`age`,`name`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci
@@ -132,62 +136,76 @@ class TestMysqlCreateStatementFilter(unittest.TestCase):
         self._assert_is_create_table_stmt(statement)
         self._assert_equal_table_name(statement, u'abc')
         column_definitions = statement.token_next_by_instance(0, sql.ColumnsDefinition).tokens
-        self.assertEqual(len(column_definitions), 8)
-        self._assert_column_definition(
+        self.assertEqual(len(column_definitions), 10)
+        self._assert_column_definition_with_length(
             col_definition=column_definitions[0],
             column_name=u'id',
             column_type=u'int',
             column_type_length=(u'11',),
             column_attributes=[(u'not null',), (u'auto_increment',)]
         )
-        self._assert_column_definition(
+        self._assert_column_definition_with_length(
             col_definition=column_definitions[1],
             column_name=u'name',
             column_type=u'varchar',
             column_type_length=(u'64',),
             column_attributes=[(u'collate', u'utf8_unicode_ci'), (u'default', u'null')]
         )
-        self._assert_column_definition(
+        self._assert_column_definition_with_length(
             col_definition=column_definitions[2],
             column_name=u'address',
             column_type=u'varchar',
             column_type_length=(u'128',),
             column_attributes=[(u'collate', u'utf8_unicode_ci'), (u'default', u'null')]
         )
-        self._assert_column_definition(
+        self._assert_column_definition_with_length(
             col_definition=column_definitions[3],
             column_name=u'related_id',
             column_type=u'int',
             column_type_length=(u'11',),
             column_attributes=[(u'not null',), (u'default', u'0',)]
         )
-        self._assert_column_definition(
+        self._assert_column_definition_with_length(
             col_definition=column_definitions[4],
             column_name=u'currency',
             column_type=u'double',
             column_type_length=(u'8', u'2'),
             column_attributes=[(u'default', u'null')]
         )
-        self._assert_column_definition(
+        self._assert_column_definition_with_length(
             col_definition=column_definitions[5],
             column_name=u'time_created',
             column_type=u'int',
             column_type_length=(u'11',),
             column_attributes=[(u'not null',), (u'default', u'0')]
         )
-        self._assert_column_definition(
+        self._assert_column_definition_with_length(
             col_definition=column_definitions[6],
             column_name=u'age',
             column_type=u'int',
             column_type_length=(u'10',),
             column_attributes=[(u'unsigned',), (u'default', u'null')]
         )
-        self._assert_column_definition(
+        self._assert_column_definition_with_length(
             col_definition=column_definitions[7],
             column_name=u'type',
             column_type=u'tinyint',
             column_type_length=(u'3',),
             column_attributes=[(u'unsigned',), (u'default', u'null')]
+        )
+        self._assert_column_definition_with_values(
+            col_definition=column_definitions[8],
+            column_name=u'size',
+            column_type=u'enum',
+            column_type_values=('small', 'medium', 'large'),
+            column_attributes=[(u'collate', u'utf8_unicode_ci'),]
+        )
+        self._assert_column_definition_with_values(
+            col_definition=column_definitions[9],
+            column_name=u'teams',
+            column_type=u'set',
+            column_type_values=('a', 'b', 'c'),
+            column_attributes=[(u'collate', u'utf8_unicode_ci'),]
         )
 
     def test_create_statement_without_column_type_length(self):
@@ -198,21 +216,21 @@ class TestMysqlCreateStatementFilter(unittest.TestCase):
         self._assert_equal_table_name(statement, u'abc')
         column_definitions = statement.token_next_by_instance(0, sql.ColumnsDefinition).tokens
         self.assertEqual(len(column_definitions), 3)
-        self._assert_column_definition(
+        self._assert_column_definition_with_length(
             col_definition=column_definitions[0],
             column_name=u'id',
             column_type=u'int',
             column_type_length=None,
             column_attributes=[(u'not null',), (u'auto_increment',)]
         )
-        self._assert_column_definition(
+        self._assert_column_definition_with_length(
             col_definition=column_definitions[1],
             column_name=u'age',
             column_type=u'int',
             column_type_length=None,
             column_attributes=[(u'default', u'null')]
         )
-        self._assert_column_definition(
+        self._assert_column_definition_with_length(
             col_definition=column_definitions[2],
             column_name=u'name',
             column_type=u'varchar',
@@ -227,26 +245,40 @@ class TestMysqlCreateStatementFilter(unittest.TestCase):
         self._assert_is_create_table_stmt(statement)
         self._assert_equal_table_name(statement, u'abc')
         column_definitions = statement.token_next_by_instance(0, sql.ColumnsDefinition).tokens
-        self.assertEqual(len(column_definitions), 3)
-        self._assert_column_definition(
+        self.assertEqual(len(column_definitions), 5)
+        self._assert_column_definition_with_length(
             col_definition=column_definitions[0],
             column_name=u'id',
             column_type=u'int',
             column_type_length=(u'11',),
             column_attributes=[]
         )
-        self._assert_column_definition(
+        self._assert_column_definition_with_length(
             col_definition=column_definitions[1],
             column_name=u'age',
             column_type=u'int',
             column_type_length=(u'11',),
             column_attributes=[]
         )
-        self._assert_column_definition(
+        self._assert_column_definition_with_length(
             col_definition=column_definitions[2],
             column_name=u'name',
             column_type=u'varchar',
             column_type_length=(u'64',),
+            column_attributes=[]
+        )
+        self._assert_column_definition_with_values(
+            col_definition=column_definitions[3],
+            column_name=u'size',
+            column_type=u'enum',
+            column_type_values=('small', 'medium', 'large'),
+            column_attributes=[]
+        )
+        self._assert_column_definition_with_values(
+            col_definition=column_definitions[4],
+            column_name=u'teams',
+            column_type=u'set',
+            column_type_values=('a', 'b', 'c'),
             column_attributes=[]
         )
 
@@ -286,19 +318,33 @@ class TestMysqlCreateStatementFilter(unittest.TestCase):
             expected_attributes=[]
         )
 
-    def test_clean_quotes(self):
+    def test_clean_identifiers_quotes(self):
         filter = sqlparse.filters.MysqlCreateStatementFilter()
-        assert filter._clean_quote('abc') == 'abc'
-        assert filter._clean_quote('"abc"') == 'abc'
-        assert filter._clean_quote('`ab``c`') == 'ab`c'
-        assert filter._clean_quote('"ab""c"') == 'ab"c'
-        assert filter._clean_quote('`ab""c`') == 'ab""c'
-        assert filter._clean_quote('"ab``c"') == 'ab``c'
-        assert filter._clean_quote('"ab""c"') == 'ab"c'
-        assert filter._clean_quote('`"abc"`') == '"abc"'
-        assert filter._clean_quote('"`abc`"') == '`abc`'
-        assert filter._clean_quote('`"a""b``c"`') == '"a""b`c"'
-        assert filter._clean_quote('"`a``b""c`"') == '`a``b"c`'
+        assert filter._clean_identifiers_quote('abc') == 'abc'
+        assert filter._clean_identifiers_quote('"abc"') == 'abc'
+        assert filter._clean_identifiers_quote('`ab``c`') == 'ab`c'
+        assert filter._clean_identifiers_quote('"ab""c"') == 'ab"c'
+        assert filter._clean_identifiers_quote('`ab""c`') == 'ab""c'
+        assert filter._clean_identifiers_quote('"ab``c"') == 'ab``c'
+        assert filter._clean_identifiers_quote('"ab""c"') == 'ab"c'
+        assert filter._clean_identifiers_quote('`"abc"`') == '"abc"'
+        assert filter._clean_identifiers_quote('"`abc`"') == '`abc`'
+        assert filter._clean_identifiers_quote('`"a""b``c"`') == '"a""b`c"'
+        assert filter._clean_identifiers_quote('"`a``b""c`"') == '`a``b"c`'
+
+    def test_string_quotes(self):
+        filter = sqlparse.filters.MysqlCreateStatementFilter()
+        assert filter._clean_string_quote('abc') == 'abc'
+        assert filter._clean_string_quote('"abc"') == 'abc'
+        assert filter._clean_string_quote('\'ab\'\'c\'') == 'ab\'c'
+        assert filter._clean_string_quote('"ab""c"') == 'ab"c'
+        assert filter._clean_string_quote('\'ab""c\'') == 'ab""c'
+        assert filter._clean_string_quote('"ab\'\'c"') == 'ab\'\'c'
+        assert filter._clean_string_quote('"ab""c"') == 'ab"c'
+        assert filter._clean_string_quote('\'"abc"\'') == '"abc"'
+        assert filter._clean_string_quote('"\'abc\'"') == '\'abc\''
+        assert filter._clean_string_quote('\'"a""b\'\'c"\'') == '"a""b\'c"'
+        assert filter._clean_string_quote('"\'a\'\'b""c\'"') == '\'a\'\'b"c\''
 
     def test_is_create_temp_table_stmt(self):
         sql_stmt = 'create temporary  table  `foo.``bar` (id int);'
@@ -390,7 +436,7 @@ class TestMysqlCreateStatementFilter(unittest.TestCase):
         self.assertEqual(len(col_definitions), 1)
 
         col_definition = col_definitions[0]
-        self._assert_column_definition(
+        self._assert_column_definition_with_length(
             col_definition,
             expected_name,
             expected_type,
@@ -398,7 +444,7 @@ class TestMysqlCreateStatementFilter(unittest.TestCase):
             expected_attributes
         )
 
-    def _assert_column_definition(
+    def _assert_column_definition_with_length(
         self,
         col_definition,
         column_name,
@@ -412,6 +458,26 @@ class TestMysqlCreateStatementFilter(unittest.TestCase):
         self.assertEqual(
             self._get_column_type_length(col_definition),
             column_type_length
+        )
+        self.assertEqual(
+            self._get_column_attributes(col_definition),
+            column_attributes
+        )
+
+    def _assert_column_definition_with_values(
+        self,
+        col_definition,
+        column_name,
+        column_type,
+        column_type_values,
+        column_attributes
+    ):
+        assert isinstance(col_definition, sql.ColumnDefinition)
+        self.assertEqual(self._get_column_name(col_definition), column_name)
+        self.assertEqual(self._get_column_type(col_definition), column_type)
+        self.assertEqual(
+            self._get_column_type_values(col_definition),
+            column_type_values
         )
         self.assertEqual(
             self._get_column_attributes(col_definition),
@@ -435,6 +501,19 @@ class TestMysqlCreateStatementFilter(unittest.TestCase):
                 token.value
                 for token in column_type_length_token.tokens
                 if token.ttype is T.Literal.Number.Integer
+            )
+        return None
+
+    def _get_column_type_values(self, column_definition_token):
+        column_type_values_token = column_definition_token.token_next_by_instance(
+            0, sql.ColumnTypeValues
+        )
+        if column_type_values_token is not None:
+            filter = sqlparse.filters.MysqlCreateStatementFilter()
+            return tuple(
+                filter._clean_string_quote(token.value)
+                for token in column_type_values_token.tokens
+                if token.ttype is T.Literal.String.Single
             )
         return None
 

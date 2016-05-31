@@ -593,18 +593,27 @@ class MysqlCreateStatementFilter(object):
         if not table_name_token:
             raise SQLParseError('Cannot find table name.')
         table_name_token_index = statement.token_index(table_name_token)
-        table_name = self._clean_quote(table_name_token.value)
+        table_name = self._clean_identifiers_quote(table_name_token.value)
         statement.tokens[table_name_token_index] = sql.TableName(
             value=table_name,
             ttype=T.Name
         )
         return table_name_token_index + 1
 
-    def _clean_quote(self, text):
+    def _clean_identifiers_quote(self, text):
         """Clean the quotes for identifiers.  For the information of identifier:
         https://dev.mysql.com/doc/refman/5.5/en/identifiers.html.
         """
         clean_text = self._remove_quote(text, '`')
+        if clean_text == text:
+            clean_text = self._remove_quote(clean_text, '"')
+        return clean_text
+
+    def _clean_string_quote(self, text):
+        """Clean the quotes for string literals.  For the information of string-literals:
+        https://dev.mysql.com/doc/refman/5.5/en/string-literals.html.
+        """
+        clean_text = self._remove_quote(text, '\'')
         if clean_text == text:
             clean_text = self._remove_quote(clean_text, '"')
         return clean_text
@@ -690,9 +699,13 @@ class MysqlCreateStatementFilter(object):
         column_definition_children_tokens.extend(
             self._skip_white_space_and_new_line_tokens(token_queue)
         )
-        column_type_length_token = self._create_column_type_length(token_queue)
-        if column_type_length_token:
-            column_definition_children_tokens.append(column_type_length_token)
+
+        if col_type_token.value.lower() in ['set', 'enum']:
+            column_type_parenthesis_token = self._create_column_type_values(token_queue)
+        else:
+            column_type_parenthesis_token = self._create_column_type_length(token_queue)
+        if column_type_parenthesis_token:
+            column_definition_children_tokens.append(column_type_parenthesis_token)
 
         column_definition_children_tokens.extend(
             self._skip_white_space_and_new_line_tokens(token_queue)
@@ -708,7 +721,7 @@ class MysqlCreateStatementFilter(object):
         if len(token_queue) <= 0:
             raise SQLParseError("Unable to get column name. token_queue is empty.")
         return sql.ColumnName(
-            value=self._clean_quote(token_queue.popleft().value),
+            value=self._clean_identifiers_quote(token_queue.popleft().value),
             ttype=T.Name
         )
 
@@ -735,6 +748,18 @@ class MysqlCreateStatementFilter(object):
             parenthesis_token = token_queue.popleft()
             return sql.ColumnTypeLength(
                 tokens=parenthesis_token.tokens
+            )
+
+    def _create_column_type_values(self, token_queue):
+        if len(token_queue) <= 0:
+            return None
+        if isinstance(token_queue[0], sql.Parenthesis):
+            parenthesis_token = token_queue.popleft()
+            return sql.ColumnTypeValues(
+                tokens=[sql.Token(
+                    value=self._clean_string_quote(token.value),
+                    ttype=token.ttype
+                ) for token in parenthesis_token.tokens]
             )
 
     def _create_col_attrs_token(self, token_queue, col_type_token):
